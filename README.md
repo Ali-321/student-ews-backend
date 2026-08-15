@@ -137,15 +137,9 @@ Petunjuk langkah demi langkah untuk menginstal dan menjalankan server backend se
 #### 1️⃣ Clone Repository & Masuk Direktori
 
 ```bash
-git clone [https://github.com/username/student-ews-backend.git](https://github.com/username/student-ews-backend.git)
+git clone [https://github.com/Ali-321/student-ews-backend.git](https://github.com/Ali-321/student-ews-backend.git)
 cd student-ews-backend
 ```
-
-```bash
-git clone [https://github.com/username/student-ews-backend.git](https://github.com/username/student-ews-backend.git)
-cd student-ews-backend
-```
-
 
 #### 2️⃣ Buat & Aktifkan Virtual Environment
 
