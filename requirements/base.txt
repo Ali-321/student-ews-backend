@@ -1,3 +1,4 @@
 Django>=5.0,<6.0
 djangorestframework
 django-cors-headers
+PyMySQL>=1.1.0
