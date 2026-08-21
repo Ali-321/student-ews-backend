@@ -28,9 +28,10 @@ jobs:
               uses: astral-sh/setup-uv@v3
               with:
                   enable-cache: true
+                  cache-dependency-glob: "requirements/*.txt"
 
             - name: Set up Python
-              uses: actions/setup-python@v5
+              uses: actions/setup-python@v5i
               with:
                   python-version: "3.12"
 
