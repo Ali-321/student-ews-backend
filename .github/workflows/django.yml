@@ -1,0 +1,46 @@
+name: Django CI (Test & Lint)
+
+on:
+    push:
+        branches: ["main", "master"]
+    pull_request:
+        branches: ["main", "master"]
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+
+        services:
+            mariadb:
+                image: mariadb:10.6
+                env:
+                    MYSQL_ROOT_PASSWORD: admin123
+                    MYSQL_DATABASE: student_ews_db
+                ports:
+                    - 3306:3306
+                options: --health-cmd="healthcheck.sh --connect --innodb_initialized" --health-interval=10s --health-timeout=5s --health-retries=3
+
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+
+            - name: Install uv
+              uses: astral-sh/setup-uv@v3
+              with:
+                  enable-cache: true
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+
+            - name: Install Dependencies with uv
+
+              run: |
+                  uv pip install --system -r requirements/local.txt
+
+            - name: Run Django Tests
+              env:
+                  DJANGO_SETTINGS_MODULE: config.settings.local
+              run: |
+                  python manage.py test --settings=config.settings.local
