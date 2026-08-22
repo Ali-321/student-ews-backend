@@ -1,9 +1,9 @@
-
 from django.urls import path
-from .views import LoginApi, MeApi, TokenRefreshApi
+from .views import (LoginApi, MeApi, TokenRefreshApi, UserListCreateApi)
 
 urlpatterns = [
     path("login/", LoginApi.as_view(), name="login"),
     path("refresh/", TokenRefreshApi.as_view(), name="token_refresh"),
     path("me/", MeApi.as_view(), name="me"),
+    path("users/", UserListCreateApi.as_view(), name="user_list_create"),
 ]

@@ -7,9 +7,53 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
-from .selectors import user_get_me_selector
-from .serializers import (LoginInputSerializer,TokenRefreshInputSerializer,UserMeOutputSerializer,)
+from .selectors import user_get_me_selector, user_list_selector
 from .services import auth_login_service
+from .permissions import IsAdminRole
+from .serializers import (
+    LoginInputSerializer,
+    TokenRefreshInputSerializer,
+    UserCreateInputSerializer,
+    UserListOutputSerializer,
+    UserMeOutputSerializer,
+)
+from .services import auth_login_service, user_create_service
+
+
+class UserListCreateApi(APIView):
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        role_filter = request.query_params.get("role")
+        users = user_list_selector(role=role_filter)
+        serializer = UserListOutputSerializer(users, many=True)
+        return Response(
+            {
+                "success": True,
+                "message": "Daftar user berhasil diambil.",
+                "data": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def post(self, request):
+        serializer = UserCreateInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = user_create_service(**serializer.validated_data)
+        output_serializer = UserListOutputSerializer(user)
+
+        return Response(
+            {
+                "success": True,
+                "message": "Akun berhasil dibuat.",
+                "data": output_serializer.data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+
 
 
 class LoginApi(APIView):

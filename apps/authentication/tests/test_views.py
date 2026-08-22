@@ -50,3 +50,22 @@ class AuthViewsTest(APITestCase):
         # Request ke endpoint me TANPA token
         response = self.client.get(self.me_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_create_user_by_admin_success(self):
+        self.client.force_authenticate(user=self.user) # admin user
+        payload = {
+            "email": "guru1@school.id",
+            "password": "Password123!",
+            "role": "GURU"
+        }
+        response = self.client.post(reverse("user_list_create"), payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["data"]["email"], "guru1@school.id")
+        
+    def test_create_user_forbidden_for_non_admin(self):
+        regular_user = User.objects.create_user(email="siswa@school.id", password="password", role=User.Role.SISWA)
+        self.client.force_authenticate(user=regular_user)
+        
+        response = self.client.post(reverse("user_list_create"), {})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+

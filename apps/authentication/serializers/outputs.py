@@ -6,3 +6,9 @@ class UserMeOutputSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("id", "email", "role", "is_superuser", "is_staff", "date_joined")
+
+
+class UserListOutputSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("id", "email", "role", "is_active", "date_joined")

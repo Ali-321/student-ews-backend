@@ -1,6 +1,9 @@
 from django.contrib.auth import authenticate
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.exceptions import ValidationError
+
+from authentication.models import User
 
 
 def auth_login_service(*, email: str, password: str) -> dict:
@@ -26,3 +29,15 @@ def auth_login_service(*, email: str, password: str) -> dict:
             "is_superuser": user.is_superuser,
         },
     }
+
+def user_create_service(*, email: str, password: str, role: str) -> User:
+    """Service mutasi untuk membuat user baru oleh Admin."""
+    if User.objects.filter(email=email).exists():
+        raise ValidationError({"email": "User dengan email ini sudah terdaftar."})
+
+    user = User.objects.create_user(
+        email=email,
+        password=password,
+        role=role,
+    )
+    return user
