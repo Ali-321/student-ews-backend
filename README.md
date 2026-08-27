@@ -11,16 +11,25 @@ erDiagram
     TAHUN_AJARAN ||--o{ SEMESTER : "memiliki"
     SEMESTER ||--o{ NILAI_SISWA : "mencatat"
     SEMESTER ||--o{ PRESENSI_SISWA : "mencatat"
+    SEMESTER ||--o{ HISTORI_STUDYTIME : "mencatat"
+    SEMESTER ||--o{ PREDICTION_RESULT : "periode"
 
     USER ||--o| KELAS : "wali_kelas_id"
     USER ||--o{ MATA_PELAJARAN : "pengajar_id"
     USER ||--o{ SISWA : "parent_user_id (opsional)"
     KELAS ||--o{ SISWA : "kelas_id"
-    SISWA ||--|| PREDICTION_RESULT : "status terkini"
+    
+    SISWA ||--o{ PREDICTION_RESULT : "histori risiko"
+    MATA_PELAJARAN ||--o{ PREDICTION_RESULT : "risiko per mapel"
+    
     SISWA ||--o{ NILAI_SISWA : "histori nilai"
     MATA_PELAJARAN ||--o{ NILAI_SISWA : "evaluasi mapel"
+    
     SISWA ||--o{ PRESENSI_SISWA : "histori presensi"
     MATA_PELAJARAN ||--o{ PRESENSI_SISWA : "presensi mapel"
+
+    SISWA ||--o{ HISTORI_STUDYTIME : "histori belajar"
+    MATA_PELAJARAN ||--o{ HISTORI_STUDYTIME : "waktu belajar mapel"
 
     TAHUN_AJARAN {
         bigint id PK
@@ -53,8 +62,8 @@ erDiagram
         string nisn PK
         string nama
         string gender "L / P"
+        int angkatan "Filter tahun masuk"
         int traveltime "ML Feature"
-        int studytime "ML Feature"
         bigint kelas_id FK "KELAS.id"
         bigint parent_user_id FK "USER.id (Opsional)"
     }
@@ -66,12 +75,23 @@ erDiagram
         bigint pengajar_id FK "USER.id (Guru)"
     }
 
+    HISTORI_STUDYTIME {
+        bigint id PK
+        string siswa_id FK "SISWA.nisn"
+        bigint mapel_id FK "MATA_PELAJARAN.id"
+        bigint semester_id FK "SEMESTER.id"
+        int minggu_ke "Sumbu-X grafik (1-16)"
+        int studytime "Durasi belajar (ML Feature)"
+        datetime tanggal_input
+    }
+
     NILAI_SISWA {
         bigint id PK
         string siswa_id FK "SISWA.nisn"
         bigint mapel_id FK "MATA_PELAJARAN.id"
         bigint semester_id FK "SEMESTER.id"
-        string jenis_evaluasi
+        int minggu_ke "Sumbu-X grafik (1-16)"
+        string jenis_evaluasi "QUIZ / TUGAS / UTS / UAS"
         string nama_evaluasi
         float skor
         boolean is_terlambat
@@ -83,16 +103,20 @@ erDiagram
         string siswa_id FK "SISWA.nisn"
         bigint mapel_id FK "MATA_PELAJARAN.id"
         bigint semester_id FK "SEMESTER.id"
+        int minggu_ke "Sumbu-X grafik (1-16)"
         date tanggal
         string status "Hadir / Izin / Sakit / Alpa"
     }
 
     PREDICTION_RESULT {
         bigint id PK
-        string siswa_id FK "SISWA.nisn (UK)"
+        string siswa_id FK "SISWA.nisn"
+        bigint mapel_id FK "MATA_PELAJARAN.id"
+        bigint semester_id FK "SEMESTER.id"
+        int minggu_ke "Sumbu-X grafik (1-16)"
         int risk_score "0: Low, 1: Medium, 2: High"
         text recommendation
-        datetime updated_at
+        datetime created_at "Timestamp asesmen"
     }
 ```
 
