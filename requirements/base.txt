@@ -3,3 +3,4 @@ django-cors-headers
 PyMySQL>=1.1.0
 djangorestframework>=3.15.0
 djangorestframework-simplejwt>=5.3.0
+faker
