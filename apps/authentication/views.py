@@ -9,7 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from .selectors import user_get_me_selector, user_list_selector
 from .services import auth_login_service
-from .permissions import IsAdminRole
+from core.permissions import IsAdminRole
 from .serializers import (
     LoginInputSerializer,
     TokenRefreshInputSerializer,
