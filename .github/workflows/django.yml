@@ -24,24 +24,35 @@ jobs:
             - name: Checkout Code
               uses: actions/checkout@v4
 
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+
             - name: Install uv
               uses: astral-sh/setup-uv@v3
               with:
                   enable-cache: true
                   cache-dependency-glob: "requirements/*.txt"
 
-            - name: Set up Python
-              uses: actions/setup-python@v5
-              with:
-                  python-version: "3.12"
-
             - name: Install Dependencies with uv
-
               run: |
-                  uv pip install --system -r requirements/local.txt
+                  # Memastikan base.txt terinstall lebih dulu jika local.txt tidak memanggilnya secara langsung
+                  if [ -f requirements/base.txt ]; then
+                    uv pip install --system -r requirements/base.txt
+                  fi
+                  if [ -f requirements/local.txt ]; then
+                    uv pip install --system -r requirements/local.txt
+                  fi
 
             - name: Run Django Tests
               env:
                   DJANGO_SETTINGS_MODULE: config.settings.local
+                  DB_ENGINE: django.db.backends.mysql
+                  DB_HOST: 127.0.0.1
+                  DB_PORT: 3306
+                  DB_NAME: student_ews_db
+                  DB_USER: root
+                  DB_PASSWORD: admin123
               run: |
                   python manage.py test --settings=config.settings.local
