@@ -60,6 +60,7 @@ def siswa_list_selector(*, kelas_id: int = None) -> QuerySet[Siswa]:
     qs = Siswa.objects.select_related("kelas", "parent_user").all().order_by("nama")
     if kelas_id:
         qs = qs.filter(kelas_id=kelas_id)
+    return qs
 
 
 def siswa_get_selector(*, nisn: str) -> Siswa:

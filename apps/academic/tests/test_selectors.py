@@ -31,7 +31,6 @@ class AcademicSelectorsTest(TestCase):
             nisn="1001",
             nama="Budi",
             gender="L",
-         
             kelas=self.kelas_a,
             parent_user=self.parent,
         )
@@ -39,7 +38,6 @@ class AcademicSelectorsTest(TestCase):
             nisn="1002",
             nama="Andi",
             gender="L",
-        
             kelas=self.kelas_b,
         )
 
@@ -69,6 +67,6 @@ class AcademicSelectorsTest(TestCase):
         self.assertEqual(qs.count(), 1)
         self.assertEqual(qs.first().nisn, "1001")
 
-    def test_siswa_list_selector_combined_filters(self):
-        qs = siswa_list_selector(kelas_id=self.kelas_a.id)
+    def test_siswa_list_selector_invalid_kelas(self):
+        qs = siswa_list_selector(kelas_id=9999)
         self.assertEqual(qs.count(), 0)

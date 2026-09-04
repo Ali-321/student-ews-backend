@@ -18,7 +18,7 @@ class AssessmentViewsTest(APITestCase):
         self.ta = TahunAjaran.objects.create(nama="2025/2026", is_aktif=True)
         self.semester = Semester.objects.create(tahun_ajaran=self.ta, semester_ke=1, is_aktif=True)
         self.kelas = Kelas.objects.create(nama_kelas="10 IPA 1")
-        self.siswa = Siswa.objects.create(nisn="0012345678", nama="Budi", gender="L", angkatan=2025, kelas=self.kelas)
+        self.siswa = Siswa.objects.create(nisn="0012345678", nama="Budi", gender="L", kelas=self.kelas)
         self.mapel = MataPelajaran.objects.create(kode_mapel="MAT10", nama_mapel="Matematika")
 
     def test_histori_studytime_list_create_api(self):
