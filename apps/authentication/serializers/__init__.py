@@ -1,6 +1,6 @@
-# apps/authentication/serializers/__init__.py
+
 from .inputs import LoginInputSerializer, TokenRefreshInputSerializer, UserCreateInputSerializer
-from .outputs import UserMeOutputSerializer, UserListOutputSerializer
+from .outputs import TokenRefreshDataOutputSerializer, UserMeOutputSerializer, UserListOutputSerializer,AuthTokenDataOutputSerializer
 
 __all__ = [
     "LoginInputSerializer",
@@ -8,4 +8,6 @@ __all__ = [
     "UserCreateInputSerializer",
     "UserMeOutputSerializer",
     "UserListOutputSerializer",
+    "AuthTokenDataOutputSerializer",
+    "TokenRefreshDataOutputSerializer",
 ]

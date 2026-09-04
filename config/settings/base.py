@@ -50,6 +50,8 @@ INSTALLED_APPS = [
 
     # Third Party Apps
     'rest_framework',
+    'django_filters',
+    'drf_spectacular',
     'corsheaders',
     'rest_framework_simplejwt',
 
@@ -61,11 +63,29 @@ INSTALLED_APPS = [
     'ews',
 ]
 
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Student EWS API',
+    'DESCRIPTION': (
+        'Dokumentasi API Early Warning System & Direktori Siswa (Dicoding'
+        ' Capstone)'
+    ),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    # Mengaktifkan penyimpanan Token di Swagger UI agar tidak hilang saat refresh
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+    },
+}
+
 # Set authentication class default ke JWT
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    #Wajib untuk drf-spectacular Swagger docs
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # Konfigurasi durasi JWT

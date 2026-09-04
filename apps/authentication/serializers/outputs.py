@@ -12,3 +12,14 @@ class UserListOutputSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("id", "email", "role", "is_active", "date_joined")
+
+# --- Schema Output Khusus Autentikasi ---
+class AuthTokenDataOutputSerializer(serializers.Serializer):
+  access_token = serializers.CharField()
+  refresh_token = serializers.CharField(required=False)
+  user = UserMeOutputSerializer(required=False)
+
+
+class TokenRefreshDataOutputSerializer(serializers.Serializer):
+  access_token = serializers.CharField()
+  refresh_token = serializers.CharField(required=False)
