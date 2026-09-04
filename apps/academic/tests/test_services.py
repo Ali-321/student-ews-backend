@@ -26,7 +26,6 @@ class AcademicServicesTest(TestCase):
             nisn="12345678",
             nama="Budi Santoso",
             gender="L",
-            angkatan=2025,
             kelas_id=self.kelas.id,
         )
         self.assertEqual(siswa.nama, "Budi Santoso")

@@ -78,7 +78,6 @@ class Siswa(models.Model):
     nisn = models.CharField(max_length=20, primary_key=True)
     nama = models.CharField(max_length=100)
     gender = models.CharField(max_length=1, choices=GenderChoices.choices)
-    angkatan = models.IntegerField()
     kelas = models.ForeignKey(Kelas, on_delete=models.CASCADE, related_name="siswa_list")
     parent_user = models.ForeignKey(
         User,

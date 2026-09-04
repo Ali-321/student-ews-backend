@@ -8,6 +8,7 @@ from .views import (
     SemesterListCreateApi,
     SiswaDetailApi,
     SiswaListCreateApi,
+
     TahunAjaranDetailApi,
     TahunAjaranListCreateApi,
 )
@@ -30,4 +31,5 @@ urlpatterns = [
     # Siswa
     path("siswa/", SiswaListCreateApi.as_view(), name="siswa_list_create"),
     path("siswa/<str:nisn>/", SiswaDetailApi.as_view(), name="siswa_detail"),
+
 ]

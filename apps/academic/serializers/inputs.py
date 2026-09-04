@@ -55,7 +55,6 @@ class SiswaInputSerializer(serializers.Serializer):
     nisn = serializers.CharField(max_length=20)
     nama = serializers.CharField(max_length=100)
     gender = serializers.ChoiceField(choices=Siswa.GenderChoices.choices)
-    angkatan = serializers.IntegerField()
     kelas_id = serializers.IntegerField()
     parent_user_id = serializers.IntegerField(required=False, allow_null=True)
 
@@ -63,6 +62,5 @@ class SiswaInputSerializer(serializers.Serializer):
 class SiswaUpdateSerializer(serializers.Serializer):
     nama = serializers.CharField(max_length=100, required=False)
     gender = serializers.ChoiceField(choices=Siswa.GenderChoices.choices, required=False)
-    angkatan = serializers.IntegerField(required=False)
     kelas_id = serializers.IntegerField(required=False)
     parent_user_id = serializers.IntegerField(required=False, allow_null=True)

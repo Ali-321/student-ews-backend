@@ -13,7 +13,6 @@ class AcademicViewsTest(APITestCase):
             nisn="1001",
             nama="Budi",
             gender="L",
-            angkatan=2025,
             kelas=self.kelas,
         )
 

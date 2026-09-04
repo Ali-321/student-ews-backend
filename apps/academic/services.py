@@ -143,7 +143,6 @@ def siswa_create_service(
     nisn: str,
     nama: str,
     gender: str,
-    angkatan: int,
     kelas_id: int,
     parent_user_id: int = None,
 ) -> Siswa:
@@ -164,7 +163,6 @@ def siswa_create_service(
         nisn=nisn,
         nama=nama,
         gender=gender,
-        angkatan=angkatan,
         kelas=kelas,
         parent_user=parent_user,
     )

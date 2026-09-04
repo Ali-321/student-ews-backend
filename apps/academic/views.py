@@ -1,8 +1,12 @@
+from django.db.models import Q, Avg, Max
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from core.pagination import LimitOffsetPagination, get_paginated_response
+from academic.models import Siswa
+from assessment.models import NilaiSiswa, PredictionResult, PresensiSiswa
+from core.pagination import LimitOffsetPagination, SiswaPagination, get_paginated_response
 from core.permissions import IsAdminRole
 
 from academic.selectors import (
@@ -228,28 +232,113 @@ class MataPelajaranDetailApi(APIView):
 
 # ==================== SISWA ====================
 class SiswaListCreateApi(APIView):
-    permission_classes = [IsAdminRole]
+  authentication_classes = [JWTAuthentication]
+  permission_classes = [IsAdminRole]
 
-    class Pagination(LimitOffsetPagination):
-        default_limit = 10
+  class Pagination(LimitOffsetPagination):
+    default_limit = 10
 
-    def get(self, request):
-        kelas_id = request.query_params.get("kelas_id")
-        angkatan = request.query_params.get("angkatan")
-        return get_paginated_response(
-            pagination_class=self.Pagination,
-            serializer_class=SiswaOutputSerializer,
-            queryset=siswa_list_selector(kelas_id=kelas_id, angkatan=angkatan),
-            request=request,
-            view=self,
-        )
+  def get(self, request):
+    # 1. Parameter Query (Mendukung parameter 'kelas' & 'kelas_id')
+    search_query = request.query_params.get('search', '').strip()
+    kelas_id = request.query_params.get(
+        'kelas_id'
+    ) or request.query_params.get('kelas')
+    risk_filter = request.query_params.get('risk')
 
-    def post(self, request):
-        serializer = SiswaInputSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        siswa = siswa_create_service(**serializer.validated_data)
-        return Response({"success": True, "message": "Siswa berhasil dibuat.", "data": SiswaOutputSerializer(siswa).data}, status=status.HTTP_201_CREATED)
+    # 2. Ambil Minggu Terakhir Prediksi
+    latest_week = (
+        PredictionResult.objects.aggregate(max_w=Max('minggu_ke'))['max_w']
+        or 1
+    )
 
+    # 3. Normalisasi Map Risk Integer (0=LOW, 1=MEDIUM, 2=HIGH)
+    INPUT_TO_INT_MAP = {
+        '0': 0,
+        'LOW': 0,
+        '1': 1,
+        'MEDIUM': 1,
+        '2': 2,
+        'HIGH': 2,
+    }
+    INT_TO_LABEL_MAP = {0: 'LOW', 1: 'MEDIUM', 2: 'HIGH'}
+
+    latest_preds = PredictionResult.objects.filter(minggu_ke=latest_week)
+
+    student_risk_map = {}
+    for pred in latest_preds:
+      siswa_pk = str(pred.siswa_id)
+      score = int(pred.risk_score)
+      if siswa_pk in student_risk_map:
+        student_risk_map[siswa_pk] = max(student_risk_map[siswa_pk], score)
+      else:
+        student_risk_map[siswa_pk] = score
+
+    student_label_map = {
+        pk: INT_TO_LABEL_MAP.get(score, 'LOW')
+        for pk, score in student_risk_map.items()
+    }
+
+    # 4. Filter QuerySet Siswa
+    siswa_qs = Siswa.objects.select_related('kelas', 'parent_user').order_by(
+        'nama'
+    )
+
+    if search_query:
+      siswa_qs = siswa_qs.filter(
+          Q(nama__icontains=search_query) | Q(nisn__icontains=search_query)
+      )
+
+    if kelas_id and str(kelas_id).strip() not in ['', 'null', 'undefined']:
+      siswa_qs = siswa_qs.filter(kelas_id=kelas_id)
+
+    # 5. Penyaringan Berdasarkan Integer Risk
+    if risk_filter and str(risk_filter).strip() not in [
+        '',
+        'null',
+        'undefined',
+    ]:
+      raw_input = str(risk_filter).upper().strip()
+      target_int = INPUT_TO_INT_MAP.get(raw_input)
+
+      if target_int is not None:
+        matched_pks = [
+            pk for pk, score in student_risk_map.items() if score == target_int
+        ]
+
+        if target_int == 0:  # LOW
+          siswa_qs = siswa_qs.filter(
+              Q(pk__in=matched_pks) & ~Q(pk__in=list(student_risk_map.keys()))
+          )
+        else:
+          siswa_qs = siswa_qs.filter(pk__in=matched_pks)
+
+    # 6. Paginasi & Response via Serializer Output
+    paginator = self.Pagination()
+    page = paginator.paginate_queryset(siswa_qs, request, view=self)
+
+    serializer = SiswaOutputSerializer(
+        page,
+        many=True,
+        context={'request': request, 'student_risk_map': student_label_map},
+    )
+
+    return paginator.get_paginated_response(serializer.data)
+
+  def post(self, request):
+    serializer = SiswaInputSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    siswa = siswa_create_service(**serializer.validated_data)
+    return Response(
+        {
+            'success': True,
+            'message': 'Siswa berhasil dibuat.',
+            'data': SiswaOutputSerializer(
+                siswa, context={'request': request}
+            ).data,
+        },
+        status=status.HTTP_201_CREATED,
+    )
 
 class SiswaDetailApi(APIView):
     permission_classes = [IsAdminRole]
@@ -269,3 +358,5 @@ class SiswaDetailApi(APIView):
         siswa = siswa_get_selector(nisn=nisn)
         siswa_delete_service(instance=siswa)
         return Response({"success": True, "message": "Siswa berhasil dihapus."}, status=status.HTTP_200_OK)
+
+    

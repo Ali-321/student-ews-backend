@@ -56,13 +56,10 @@ def mapel_get_selector(*, id: int) -> MataPelajaran:
 
 
 # --- SISWA ---
-def siswa_list_selector(*, kelas_id: int = None, angkatan: int = None) -> QuerySet[Siswa]:
+def siswa_list_selector(*, kelas_id: int = None) -> QuerySet[Siswa]:
     qs = Siswa.objects.select_related("kelas", "parent_user").all().order_by("nama")
     if kelas_id:
         qs = qs.filter(kelas_id=kelas_id)
-    if angkatan:
-        qs = qs.filter(angkatan=angkatan)
-    return qs
 
 
 def siswa_get_selector(*, nisn: str) -> Siswa:
