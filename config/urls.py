@@ -34,7 +34,7 @@ urlpatterns = [
     path("api/v1/auth/", include("apps.authentication.urls")),
     path("api/v1/academic/", include("apps.academic.urls")),
     path("api/v1/assessment/", include(("apps.assessment.urls", "assessment"), namespace="assessment")),
-    path("api/dashboard/", include("apps.dashboard.urls", namespace="dashboard")),
+    path("api/v1/dashboard/", include("apps.dashboard.urls", namespace="dashboard")),
 ]
 
 

@@ -1,3 +1,4 @@
+from datetime import date
 from django.test import TestCase
 from academic.models import Kelas, MataPelajaran, Semester, Siswa, TahunAjaran
 from academic.selectors import (
@@ -10,6 +11,7 @@ from academic.selectors import (
 from authentication.models import User
 
 
+
 class AcademicSelectorsTest(TestCase):
     def setUp(self):
         # Setup User Guru & Parent
@@ -20,7 +22,13 @@ class AcademicSelectorsTest(TestCase):
         self.ta1 = TahunAjaran.objects.create(nama="2024/2025", is_aktif=False)
         self.ta2 = TahunAjaran.objects.create(nama="2025/2026", is_aktif=True)
 
-        self.semester = Semester.objects.create(tahun_ajaran=self.ta2, semester_ke=1, is_aktif=True)
+        self.semester = Semester.objects.create(
+            tahun_ajaran=self.ta2,
+            semester_ke=1,
+            is_aktif=True,
+            tanggal_mulai=date(2026, 7, 13),
+            tanggal_selesai=date(2026, 12, 31)
+        )
         self.kelas_a = Kelas.objects.create(nama_kelas="10 IPA 1", wali_kelas=self.guru)
         self.kelas_b = Kelas.objects.create(nama_kelas="10 IPA 2")
 
@@ -44,7 +52,6 @@ class AcademicSelectorsTest(TestCase):
     def test_tahun_ajaran_list_selector_ordering(self):
         qs = tahun_ajaran_list_selector()
         self.assertEqual(qs.count(), 2)
-        # Dipastikan urut dari ID terbesar (-id)
         self.assertEqual(qs.first().id, self.ta2.id)
 
     def test_semester_list_selector(self):
@@ -59,7 +66,6 @@ class AcademicSelectorsTest(TestCase):
     def test_siswa_list_selector_without_filters(self):
         qs = siswa_list_selector()
         self.assertEqual(qs.count(), 2)
-        # Dipastikan urut berdasarkan nama (Andi -> Budi)
         self.assertEqual(qs.first().nama, "Andi")
 
     def test_siswa_list_selector_filter_by_kelas(self):

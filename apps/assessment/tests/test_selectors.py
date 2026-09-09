@@ -9,7 +9,13 @@ from assessment.models import HistoriStudytime, NilaiSiswa, PresensiSiswa, Predi
 class AssessmentSelectorsTest(TestCase):
     def setUp(self):
         self.ta = TahunAjaran.objects.create(nama="2025/2026", is_aktif=True)
-        self.semester = Semester.objects.create(tahun_ajaran=self.ta, semester_ke=1, is_aktif=True)
+        self.semester = Semester.objects.create(
+            tahun_ajaran=self.ta,
+            semester_ke=1,
+            is_aktif=True,
+            tanggal_mulai=date(2026, 1, 5),
+            tanggal_selesai=date(2026, 6, 30),
+        )
         self.kelas = Kelas.objects.create(nama_kelas="10 IPA 1")
         self.siswa = Siswa.objects.create(nisn="0012345678", nama="Budi", gender="L", kelas=self.kelas)
         self.mapel = MataPelajaran.objects.create(kode_mapel="MAT10", nama_mapel="Matematika")

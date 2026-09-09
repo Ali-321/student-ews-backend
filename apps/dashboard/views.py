@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from apps.core.permissions import IsGuruRole
+from apps.core.utils.permissions import IsGuruRole
 from apps.dashboard.selectors import get_dashboard_summary, get_school_analytics
 from apps.dashboard.serializers import (
     DashboardSummaryResponseSerializer,

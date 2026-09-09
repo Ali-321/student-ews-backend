@@ -28,6 +28,8 @@ class DashboardSelectorsTestCase(TestCase):
             tahun_ajaran=self.tahun_ajaran,
             semester_ke=Semester.SemesterChoices.GANJIL,
             is_aktif=True,
+            tanggal_mulai=datetime.date(2026, 1, 5),
+            tanggal_selesai=datetime.date(2026, 6, 30),
         )
         self.kelas_a = Kelas.objects.create(
             nama_kelas="X IPA 1",

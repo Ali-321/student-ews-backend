@@ -2,12 +2,13 @@ from django.test import TestCase
 from rest_framework.exceptions import ValidationError
 from academic.models import Kelas, TahunAjaran
 from academic.services import (
-    kelas_create_service,
     siswa_create_service,
     siswa_update_service,
     tahun_ajaran_create_service,
 )
+from academic.models import Semester, TahunAjaran
 
+from datetime import date
 
 class AcademicServicesTest(TestCase):
     def setUp(self):
@@ -32,3 +33,30 @@ class AcademicServicesTest(TestCase):
 
         updated = siswa_update_service(instance=siswa, nama="Budi Pekerti")
         self.assertEqual(updated.nama, "Budi Pekerti")
+
+class SemesterModelTest(TestCase):
+    def setUp(self):
+        self.ta = TahunAjaran.objects.create(nama="2026/2027", is_aktif=True)
+        # Semester mulai Senin, 13 Juli 2026
+        self.semester = Semester.objects.create(
+            tahun_ajaran=self.ta,
+            semester_ke=1,
+            is_aktif=True,
+            tanggal_mulai=date(2026, 7, 13),
+            tanggal_selesai=date(2026, 12, 31)
+        )
+
+    def test_get_minggu_ke_minggu_pertama(self):
+        # Rabu di minggu yang sama -> Minggu ke-1
+        target_date = date(2026, 7, 15)
+        self.assertEqual(self.semester.get_minggu_ke(target_date), 1)
+
+    def test_get_minggu_ke_minggu_selanjutnya(self):
+        # Tepat 2 minggu setelah tanggal mulai (27 Juli 2026) -> Minggu ke-3
+        target_date = date(2026, 7, 27)
+        self.assertEqual(self.semester.get_minggu_ke(target_date), 3)
+
+    def test_get_minggu_ke_sebelum_tanggal_mulai(self):
+        # Tanggal sebelum semester berjalan -> Default kembali ke Minggu ke-1
+        target_date = date(2026, 7, 1)
+        self.assertEqual(self.semester.get_minggu_ke(target_date), 1)

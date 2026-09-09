@@ -1,6 +1,6 @@
 from django.db import models
 from authentication.models import User
-
+from apps.core.utils.date import calculate_academic_week
 
 class TahunAjaran(models.Model):
     nama = models.CharField(max_length=20)  # Contoh: "2025/2026"
@@ -23,12 +23,23 @@ class Semester(models.Model):
     semester_ke = models.IntegerField(choices=SemesterChoices.choices)
     is_aktif = models.BooleanField(default=False)
 
+    tanggal_mulai = models.DateField()
+    tanggal_selesai = models.DateField(null=True, blank=True)
+
     class Meta:
         app_label = "academic"
         db_table = "semester"
 
     def __str__(self):
         return f"{self.tahun_ajaran.nama} - Semester {self.semester_ke}"
+    def get_minggu_ke(self, target_date) -> int:
+        """
+        Menghitung minggu ke-n berdasarkan tanggal_mulai semester ini.
+        """
+        return calculate_academic_week(
+            start_date=self.tanggal_mulai,
+            target_date=target_date
+        )
 
 
 class Kelas(models.Model):

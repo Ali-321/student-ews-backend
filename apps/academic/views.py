@@ -6,8 +6,8 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from academic.models import Siswa
 from assessment.models import NilaiSiswa, PredictionResult, PresensiSiswa
-from core.pagination import LimitOffsetPagination, SiswaPagination, get_paginated_response
-from core.permissions import IsAdminRole
+from apps.core.utils.pagination import LimitOffsetPagination, SiswaPagination, get_paginated_response
+from apps.core.utils.permissions import IsAdminRole
 
 from academic.selectors import (
     kelas_get_selector,

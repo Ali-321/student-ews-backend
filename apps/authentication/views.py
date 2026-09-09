@@ -1,4 +1,4 @@
-from core.permissions import IsAdminRole
+from apps.core.utils.permissions import IsAdminRole
 from django.shortcuts import render
 from drf_spectacular.utils import (
     OpenApiParameter,
