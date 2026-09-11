@@ -16,7 +16,7 @@ class SemesterOutputSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Semester
-        fields = ("id", "tahun_ajaran", "semester_ke", "is_aktif")
+        fields = ("id", "tahun_ajaran", "semester_ke", "is_aktif", "tanggal_mulai", "tanggal_selesai")
 
 
 class KelasOutputSerializer(serializers.ModelSerializer):

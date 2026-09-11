@@ -34,7 +34,10 @@ def user_create_service(*, email: str, password: str, role: str) -> User:
     """Service mutasi untuk membuat user baru oleh Admin."""
     if User.objects.filter(email=email).exists():
         raise ValidationError({"email": "User dengan email ini sudah terdaftar."})
-
+    
+    if role in User.Role.SUPERUSER:
+        raise ValidationError({"role": "Role ini tidak dapat digunakan untuk membuat user baru."})
+    
     user = User.objects.create_user(
         email=email,
         password=password,

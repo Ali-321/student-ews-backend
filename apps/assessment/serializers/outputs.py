@@ -10,6 +10,9 @@ class HistoriStudytimeOutputSerializer(serializers.ModelSerializer):
         model = HistoriStudytime
         fields = ["id", "siswa", "siswa_nama", "mapel", "mapel_nama", "semester", "minggu_ke", "studytime", "tanggal_input"]
 
+class StatusChoiceOutputSerializer(serializers.Serializer):
+    value = serializers.CharField()
+    label = serializers.CharField()
 
 class NilaiSiswaOutputSerializer(serializers.ModelSerializer):
     siswa_nama = serializers.CharField(source="siswa.nama", read_only=True)

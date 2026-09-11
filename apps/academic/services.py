@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.db import transaction
 from rest_framework.exceptions import NotFound, ValidationError
 
@@ -31,7 +33,7 @@ def tahun_ajaran_delete_service(*, instance: TahunAjaran) -> None:
 
 # --- SEMESTER ---
 @transaction.atomic
-def semester_create_service(*, tahun_ajaran_id: int, semester_ke: int, is_aktif: bool = False) -> Semester:
+def semester_create_service(*, tahun_ajaran_id: int, semester_ke: int, is_aktif: bool = False, tanggal_mulai: date = None, tanggal_selesai: date = None) -> Semester:
     tahun_ajaran = TahunAjaran.objects.filter(id=tahun_ajaran_id).first()
     if not tahun_ajaran:
         raise ValidationError({"tahun_ajaran_id": "Tahun Ajaran tidak ditemukan."})
@@ -39,7 +41,7 @@ def semester_create_service(*, tahun_ajaran_id: int, semester_ke: int, is_aktif:
     if is_aktif:
         Semester.objects.filter(is_aktif=True).update(is_aktif=False)
 
-    return Semester.objects.create(tahun_ajaran=tahun_ajaran, semester_ke=semester_ke, is_aktif=is_aktif)
+    return Semester.objects.create(tahun_ajaran=tahun_ajaran, semester_ke=semester_ke, is_aktif=is_aktif, tanggal_mulai=tanggal_mulai, tanggal_selesai=tanggal_selesai)
 
 
 @transaction.atomic

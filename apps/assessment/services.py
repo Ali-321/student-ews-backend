@@ -29,68 +29,79 @@ def record_studytime(
     )
     return obj
 
-
 @transaction.atomic
-def create_nilai_siswa(
-    *,
-    siswa_nisn: str,
-    mapel_id: int,
-    semester_id: int,
-    minggu_ke: int,
-    jenis_evaluasi: str,
-    nama_evaluasi: str,
-    skor: float,
-    is_terlambat: bool = False
-) -> NilaiSiswa:
-    if not (0.0 <= skor <= 100.0):
-        raise ValidationError({"skor": "Skor nilai harus berada dalam rentang 0.0 sampai 100.0"})
+def bulk_record_presensi(*, mapel_id: int, semester_id: int, tanggal_mulai, tanggal_akhir, items: list) -> list[PresensiSiswa]:
+    semester = Semester.objects.get(id=semester_id)
+    mapel = MataPelajaran.objects.get(id=mapel_id)
 
-    siswa = Siswa.objects.get(nisn=siswa_nisn)
-    mapel = MataPelajaran.objects.get(pk=mapel_id)
-    semester = Semester.objects.get(pk=semester_id)
+    presensi_records = []
+    for student_item in items:
+        siswa = Siswa.objects.get(nisn=student_item["siswa_nisn"])
+        
+        for harian in student_item["presensi_harian"]:
+            tgl = harian["tanggal"]
+            minggu_ke = semester.get_minggu_ke(target_date=tgl)
 
-    return NilaiSiswa.objects.create(
-        siswa=siswa,
-        mapel=mapel,
-        semester=semester,
-        minggu_ke=minggu_ke,
-        jenis_evaluasi=jenis_evaluasi,
-        nama_evaluasi=nama_evaluasi,
-        skor=skor,
-        is_terlambat=is_terlambat
-    )
+            presensi, _ = PresensiSiswa.objects.update_or_create(
+                siswa=siswa,
+                mapel=mapel,
+                semester=semester,
+                tanggal=tgl,
+                defaults={
+                    "minggu_ke": minggu_ke,
+                    "status": harian["status"],
+                }
+            )
+            presensi_records.append(presensi)
+
+    return presensi_records
 
 
 @transaction.atomic
-def bulk_record_presensi(
-    *,
-    mapel_id: int,
-    semester_id: int,
-    minggu_ke: int,
-    tanggal: date,
-    items: List[Dict[str, Any]]
-) -> List[PresensiSiswa]:
-    """
-    Format items: [{"siswa_nisn": "00123", "status": "Hadir"}, ...]
-    """
-    mapel = MataPelajaran.objects.get(pk=mapel_id)
-    semester = Semester.objects.get(pk=semester_id)
+def bulk_record_assessment(*, mapel_id: int, semester_id: int, tanggal_input, items: list) -> dict:
+    semester = Semester.objects.get(id=semester_id)
+    mapel = MataPelajaran.objects.get(id=mapel_id)
+    
+    # Hitung minggu_ke otomatis dari tanggal_input
+    calculated_minggu_ke = semester.get_minggu_ke(target_date=tanggal_input)
 
-    records = []
-    for item in items:
-        siswa = Siswa.objects.get(nisn=item["siswa_nisn"])
-        obj, _ = PresensiSiswa.objects.update_or_create(
-            siswa=siswa,
-            mapel=mapel,
-            semester=semester,
-            tanggal=tanggal,
-            defaults={
-                "minggu_ke": minggu_ke,
-                "status": item["status"]
-            }
-        )
-        records.append(obj)
-    return records
+    nilai_records = []
+    studytime_records = []
+
+    for student_item in items:
+        siswa = Siswa.objects.get(nisn=student_item["siswa_nisn"])
+
+        # 1. Upsert Study Time jika diisi
+        if student_item.get("studytime") is not None:
+            st, _ = HistoriStudytime.objects.update_or_create(
+                siswa=siswa,
+                mapel=mapel,
+                semester=semester,
+                minggu_ke=calculated_minggu_ke,
+                defaults={"studytime": student_item["studytime"]}
+            )
+            studytime_records.append(st)
+
+        # 2. Upsert Nilai Evaluasi (Quiz 1, Tugas, Quiz 2, dll)
+        for eval_item in student_item.get("evaluasi_list", []):
+            if eval_item.get("skor") is not None:
+                nilai, _ = NilaiSiswa.objects.update_or_create(
+                    siswa=siswa,
+                    mapel=mapel,
+                    semester=semester,
+                    jenis_evaluasi=eval_item["jenis_evaluasi"],
+                    nama_evaluasi=eval_item["nama_evaluasi"],
+                    defaults={
+                        "minggu_ke": calculated_minggu_ke,
+                        "skor": eval_item["skor"],
+                    }
+                )
+                nilai_records.append(nilai)
+
+    return {
+        "studytime_records": studytime_records,
+        "nilai_records": nilai_records,
+    }
 
 
 @transaction.atomic

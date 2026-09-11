@@ -116,3 +116,9 @@ def get_ringkasan_akademik_siswa(*, siswa_nisn: str, semester_id: int) -> Dict[s
         "presensi_detail": presensi_stats,
         "total_mapel_berisiko_tinggi": high_risk_count,
     }
+
+def get_presensi_status_choices():
+    return [
+        {"value": choice.value, "label": choice.label}
+        for choice in PresensiSiswa.StatusChoices
+    ]

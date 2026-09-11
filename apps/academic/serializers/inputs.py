@@ -17,12 +17,16 @@ class TahunAjaranUpdateSerializer(serializers.Serializer):
 class SemesterInputSerializer(serializers.Serializer):
     tahun_ajaran_id = serializers.IntegerField()
     semester_ke = serializers.ChoiceField(choices=Semester.SemesterChoices.choices)
+    tanggal_mulai = serializers.DateField()
+    tanggal_selesai = serializers.DateField(required=False, allow_null=True)
     is_aktif = serializers.BooleanField(default=False)
 
 
 class SemesterUpdateSerializer(serializers.Serializer):
     tahun_ajaran_id = serializers.IntegerField(required=False)
     semester_ke = serializers.ChoiceField(choices=Semester.SemesterChoices.choices, required=False)
+    tanggal_mulai = serializers.DateField(required=False)
+    tanggal_selesai = serializers.DateField(required=False, allow_null=True)
     is_aktif = serializers.BooleanField(required=False)
 
 

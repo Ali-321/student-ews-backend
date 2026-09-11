@@ -29,4 +29,9 @@ urlpatterns = [
         views.RingkasanAkademikSiswaAPIView.as_view(),
         name="siswa-ringkasan-akademik",
     ),
+    path(
+        "presensi/status-choices/",
+        views.StatusChoicesAPIView.as_view(),
+        name="presensi-status-choices",
+    ),
 ]
