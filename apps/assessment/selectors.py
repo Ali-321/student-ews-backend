@@ -1,8 +1,12 @@
 from typing import Dict, Any
-from django.db.models import Max, QuerySet, Avg, Count, Q, Subquery
+from django.db.models import F, ExpressionWrapper, FloatField, Max, QuerySet, Avg, Count, Q, Subquery
 from django.shortcuts import get_object_or_404
 
+from academic.models import Siswa,Semester
 from assessment.models import HistoriStudytime, NilaiSiswa, PresensiSiswa, PredictionResult
+from django.db.models import Avg, Min, Case, When, Value, CharField, Q
+from django.db.models.functions import Coalesce
+
 
 
 def histori_studytime_list(*, filters: Dict[str, Any] = None) -> QuerySet[HistoriStudytime]:
@@ -122,3 +126,78 @@ def get_presensi_status_choices():
         {"value": choice.value, "label": choice.label}
         for choice in PresensiSiswa.StatusChoices
     ]
+
+def get_siswa_with_hybrid_risk_selector(
+    *,
+    semester_id: int = None,
+    kelas_id: int = None,
+    search: str = None,
+    risk_status: str = None,
+):
+    queryset = Siswa.objects.select_related("kelas")
+
+    # Jika semester_id tidak diberikan, ambil ID semester yang sedang aktif
+    if semester_id is None:
+        active_semester = Semester.objects.filter(is_aktif=True).first()
+        if active_semester:
+            semester_id = active_semester.id
+            
+    # 1. Filter dasar Master Data
+    if kelas_id:
+        queryset = queryset.filter(kelas_id=kelas_id)
+
+    if search:
+        queryset = queryset.filter(
+            Q(nama__icontains=search) | Q(nisn__icontains=search)
+        )
+
+    # 2. Condition filter semester
+    nilai_filter = Q(nilai_list__semester_id=semester_id) if semester_id else Q()
+    pred_filter = Q(predictions__semester_id=semester_id) if semester_id else Q()
+    pres_filter = Q(presensi_list__semester_id=semester_id) if semester_id else Q()
+
+    # 3. Agregasi data
+    queryset = queryset.annotate(
+        avg_predicted_score=Coalesce(
+            Avg("nilai_list__skor", filter=nilai_filter),
+            0.0,
+            output_field=FloatField(),
+        ),
+        max_risk_score=Coalesce(
+            Max("predictions__risk_score", filter=pred_filter),
+            0,
+        ),
+        total_presensi=Count("presensi_list", filter=pres_filter),
+        total_hadir=Count(
+            "presensi_list",
+            filter=pres_filter & Q(presensi_list__status=PresensiSiswa.StatusChoices.HADIR),
+        ),
+    ).annotate(
+        avg_presensi=Case(
+            When(
+                total_presensi__gt=0,
+                then=ExpressionWrapper(
+                    (F("total_hadir") * 100.0) / F("total_presensi"),
+                    output_field=FloatField(),
+                ),
+            ),
+            default=Value(0.0),
+            output_field=FloatField(),
+        ),
+        risk_status=Case(
+            When(max_risk_score=PredictionResult.RiskChoices.HIGH, then=Value("HIGH")),
+            When(
+                Q(max_risk_score=PredictionResult.RiskChoices.MEDIUM)
+                | Q(avg_predicted_score__lt=80.0),
+                then=Value("MEDIUM"),
+            ),
+            default=Value("LOW"),
+            output_field=CharField(),
+        ),
+    )
+
+    # 4. Filter berdasarkan status risiko yang dihitung
+    if risk_status:
+        queryset = queryset.filter(risk_status__iexact=risk_status)
+
+    return queryset.order_by("nama")

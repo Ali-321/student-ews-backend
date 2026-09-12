@@ -48,3 +48,31 @@ class PredictionResultOutputSerializer(serializers.ModelSerializer):
             "id", "siswa", "siswa_nama", "mapel", "mapel_nama", "semester",
             "minggu_ke", "risk_score", "risk_display", "recommendation", "created_at"
         ]
+
+class SiswaHybridRiskOutputSerializer(serializers.Serializer):
+    nisn = serializers.CharField()
+    nama_siswa = serializers.CharField(source="nama")
+    kelas = serializers.CharField(source="kelas.nama_kelas", default="-")
+    gender = serializers.CharField(default="-")
+    presensi = serializers.SerializerMethodField()
+    nilai = serializers.SerializerMethodField()
+    status_risiko = serializers.SerializerMethodField()
+
+    def get_presensi(self, obj) -> str:
+        """Format angka menjadi string persentase (contoh: '85%')."""
+        val = round(getattr(obj, "avg_presensi", 0.0), 1)
+        return f"{int(val) if val.is_integer() else val}%"
+
+    def get_nilai(self, obj) -> float:
+        """Mengembalikan nilai rata-rata akademis."""
+        return round(getattr(obj, "avg_predicted_score", 0.0), 1)
+
+    def get_status_risiko(self, obj) -> str:
+        """Mengubah enum kode internal ke bahasa Indonesia untuk UI Badge."""
+        risk_map = {
+            "HIGH": "Tinggi",
+            "MEDIUM": "Sedang",
+            "LOW": "Rendah",
+        }
+        status = getattr(obj, "risk_status", "LOW")
+        return risk_map.get(status.upper(), status)

@@ -5,8 +5,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes, inline_serializer
 
-from apps.assessment.serializers.inputs import BulkAssessmentInputSerializer
+from assessment.serializers.inputs import BulkAssessmentInputSerializer
 
+
+from apps.core.utils.pagination import SiswaPagination, get_paginated_response
 from assessment import selectors, services
 from assessment.serializers import (
     BulkPresensiInputSerializer,
@@ -17,6 +19,7 @@ from assessment.serializers import (
     PredictionResultOutputSerializer,
     PresensiSiswaOutputSerializer,
     StatusChoiceOutputSerializer,
+    SiswaHybridRiskOutputSerializer,
 )
 
 
@@ -267,4 +270,90 @@ class StatusChoicesAPIView(APIView):
         return Response(
             {"success": True, "data": serializer.data},
             status=status.HTTP_200_OK,
+        )
+
+
+# ==================== Halaman Daftar Siswa ====================
+
+class SiswaRiskSummaryListApi(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Assessment - EWS (Untuk Halaman Daftar Siswa) catatan: semester_id optional, jika tidak diberikan akan otomatis mengambil semester aktif"],
+        summary="Mendapatkan daftar rekap risiko siswa (Paginated)",
+        description="Mengambil data rekap siswa berpaginasi dengan filter pencarian nama/NISN, kelas, dan status risiko.",
+        parameters=[
+            OpenApiParameter(
+                name="page",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Nomor halaman (Default: 1)",
+            ),
+            OpenApiParameter(
+                name="page_size",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Jumlah baris per halaman (Default: 10, Max: 100)",
+            ),
+            OpenApiParameter(
+                name="semester_id",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Filter ID Semester",
+            ),
+            OpenApiParameter(
+                name="kelas_id",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Filter ID Kelas",
+            ),
+            OpenApiParameter(
+                name="search",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Pencarian Nama Siswa atau NISN",
+            ),
+            OpenApiParameter(
+                name="risk_status",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                enum=["HIGH", "MEDIUM", "LOW", "Tinggi", "Sedang", "Rendah"],
+                description="Filter status risiko",
+            ),
+        ],
+        responses={200: SiswaHybridRiskOutputSerializer(many=True)},
+    )
+    def get(self, request):
+        semester_id = request.query_params.get("semester_id")
+        kelas_id = request.query_params.get("kelas_id")
+        search = request.query_params.get("search")
+        risk_status = request.query_params.get("risk_status")
+
+        if risk_status:
+            status_map = {
+                "tinggi": "HIGH",
+                "sedang": "MEDIUM",
+                "rendah": "LOW",
+            }
+            risk_status = status_map.get(risk_status.lower(), risk_status)
+
+        siswa_queryset = selectors.get_siswa_with_hybrid_risk_selector(
+            semester_id=int(semester_id) if semester_id and semester_id.isdigit() else None,
+            kelas_id=int(kelas_id) if kelas_id and kelas_id.isdigit() else None,
+            search=search,
+            risk_status=risk_status,
+        )
+
+        return get_paginated_response(
+            pagination_class=SiswaPagination,
+            serializer_class=SiswaHybridRiskOutputSerializer,
+            queryset=siswa_queryset,
+            request=request,
+            view=self,
         )

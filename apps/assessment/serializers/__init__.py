@@ -7,6 +7,7 @@ from assessment.serializers.inputs import (
     SiswaPresensiGridSerializer,
     EvaluasiItemSerializer,
     BulkAssessmentInputSerializer, 
+    
 )
 from assessment.serializers.outputs import (
     HistoriStudytimeOutputSerializer,
@@ -14,6 +15,7 @@ from assessment.serializers.outputs import (
     PredictionResultOutputSerializer,
     PresensiSiswaOutputSerializer,
     StatusChoiceOutputSerializer,
+    SiswaHybridRiskOutputSerializer,
 )
 
 __all__ = [
@@ -31,4 +33,5 @@ __all__ = [
     "PresensiSiswaOutputSerializer",
     "StatusChoiceOutputSerializer",
     "PredictionResultOutputSerializer",
+    "SiswaHybridRiskOutputSerializer",
 ]

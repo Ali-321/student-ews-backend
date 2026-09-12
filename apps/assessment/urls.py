@@ -34,4 +34,9 @@ urlpatterns = [
         views.StatusChoicesAPIView.as_view(),
         name="presensi-status-choices",
     ),
+    path(
+        "siswa-risk-summary/",
+        views.SiswaRiskSummaryListApi.as_view(),
+        name="siswa-risk-summary",
+    ),
 ]
