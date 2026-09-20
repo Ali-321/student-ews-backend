@@ -10,7 +10,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "c@pst0ne-d1c0ding-2026!a*#z9b!k$x2-se
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 
 # Ganti 'your-public-ip' dengan IP asli Biznet Anda
-ALLOWED_HOSTS = ['103.93.135.137', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['103.93.135.137', 'localhost', '127.0.0.1','student-ews-api.duckdns.org']
 
 # ==========================================
 # 2. KONFIGURASI CORS (UNTUK FRONTEND VERCEL)
