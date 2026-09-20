@@ -18,7 +18,7 @@ ALLOWED_HOSTS = ['103.93.135.137', 'localhost', '127.0.0.1','student-ews-api.duc
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",
-    # "https://nama-proyek-frontend.vercel.app",  <-- Masukkan link Vercel nanti di sini
+    "https://edu-pulse-student-early-warning-web-mu.vercel.app",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
