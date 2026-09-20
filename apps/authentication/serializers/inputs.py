@@ -1,6 +1,6 @@
 from rest_framework import serializers
-
 from authentication.models import User
+
 
 class LoginInputSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
@@ -14,4 +14,9 @@ class TokenRefreshInputSerializer(serializers.Serializer):
 class UserCreateInputSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True, min_length=8, required=True)
-    role = serializers.ChoiceField(choices=[choice for choice in User.Role.choices if choice[0] != User.Role.SUPERUSER], required=True, )
+    role = serializers.ChoiceField(
+        choices=[choice for choice in User.Role.choices if choice[0] != User.Role.SUPERUSER], 
+        required=True, 
+    )
+    first_name = serializers.CharField(required=False, allow_blank=True, default="")
+    last_name = serializers.CharField(required=False, allow_blank=True, default="")

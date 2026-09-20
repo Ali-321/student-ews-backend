@@ -1,4 +1,4 @@
-name: Django CI (Test & Lint)
+name: Django CI/CD Pipeline
 
 on:
     push:
@@ -7,6 +7,9 @@ on:
         branches: ["main", "master"]
 
 jobs:
+    # ==========================================
+    # TAHAP 1: AUTOMATED TESTING
+    # ==========================================
     test:
         runs-on: ubuntu-latest
 
@@ -37,7 +40,6 @@ jobs:
 
             - name: Install Dependencies with uv
               run: |
-                  # Memastikan base.txt terinstall lebih dulu jika local.txt tidak memanggilnya secara langsung
                   if [ -f requirements/base.txt ]; then
                     uv pip install --system -r requirements/base.txt
                   fi
@@ -56,3 +58,41 @@ jobs:
                   DB_PASSWORD: admin123
               run: |
                   python manage.py test --settings=config.settings.local
+
+    # ==========================================
+    # TAHAP 2: DEPLOY TO PRODUCTION (VPS)
+    # ==========================================
+    deploy:
+        name: Deploy to Biznet Gio VPS
+        runs-on: ubuntu-latest
+        needs: test # WAJIB: Deploy menunggu tahap 'test' sukses
+        if: github.event_name == 'push' # WAJIB: Jangan deploy saat Pull Request
+
+        steps:
+            - name: Execute Deployment Script via SSH
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ secrets.VPS_HOST }}
+                  username: ${{ secrets.VPS_USERNAME }}
+                  key: ${{ secrets.VPS_SSH_KEY }}
+                  script: |
+                      # 1. Pindah ke direktori proyek di server
+                      cd /var/www/student_ews
+
+                      # 2. Tarik kode terbaru yang sudah lolos tes
+                      git pull origin main
+
+                      # 3. Aktifkan Virtual Environment
+                      source .venv/bin/activate
+
+                      # 4. Install dependensi terbaru (Sesuaikan file .txt dengan yang Anda pakai di production)
+                      uv pip install -r requirements/base.txt
+
+                      # 5. Jalankan Migrasi Database
+                      python manage.py migrate --noinput
+
+                      # 6. Kumpulkan file statis
+                      python manage.py collectstatic --noinput
+
+                      # 7. Restart Gunicorn (Background Server) agar kode baru memuat
+                      sudo systemctl restart gunicorn

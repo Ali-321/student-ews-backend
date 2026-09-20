@@ -1,4 +1,4 @@
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 from rest_framework.exceptions import NotFound
 
 from academic.models import Kelas, MataPelajaran, Semester, Siswa, TahunAjaran
@@ -56,10 +56,12 @@ def mapel_get_selector(*, id: int) -> MataPelajaran:
 
 
 # --- SISWA ---
-def siswa_list_selector(*, kelas_id: int = None) -> QuerySet[Siswa]:
+def siswa_list_selector(*, search: str = None, kelas_id: int = None) -> QuerySet[Siswa]:
     qs = Siswa.objects.select_related("kelas", "parent_user").all().order_by("nama")
     if kelas_id:
         qs = qs.filter(kelas_id=kelas_id)
+    if search:
+        qs = qs.filter(Q(nama__icontains=search) | Q(nisn__icontains=search))
     return qs
 
 

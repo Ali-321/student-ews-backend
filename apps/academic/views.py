@@ -1,14 +1,8 @@
-from django.db.models import Q, Avg, Max
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
-
-from academic.models import Siswa
-from assessment.models import NilaiSiswa, PredictionResult, PresensiSiswa
-from apps.core.utils.pagination import LimitOffsetPagination, SiswaPagination, get_paginated_response
-from apps.core.utils.permissions import IsAdminRole
 
 from academic.selectors import (
     kelas_get_selector,
@@ -56,13 +50,16 @@ from academic.services import (
     tahun_ajaran_delete_service,
     tahun_ajaran_update_service,
 )
+from apps.core.utils.pagination import LimitOffsetPagination, get_paginated_response
+from apps.core.utils.permissions import IsAdminRole, IsGuruRole
 
 
 # ==================== TAHUN AJARAN ====================
 @extend_schema(tags=["Tahun Ajaran"])
 class TahunAjaranListCreateApi(APIView):
     permission_classes = [IsAdminRole]
-
+    permission_classes = [IsGuruRole]
+    
     class Pagination(LimitOffsetPagination):
         default_limit = 10
 
@@ -102,6 +99,7 @@ class TahunAjaranListCreateApi(APIView):
 @extend_schema(tags=["Tahun Ajaran"])
 class TahunAjaranDetailApi(APIView):
     permission_classes = [IsAdminRole]
+    permission_classes = [IsGuruRole]
 
     @extend_schema(
         summary="Detail Tahun Ajaran",
@@ -123,9 +121,7 @@ class TahunAjaranDetailApi(APIView):
         ta = tahun_ajaran_get_selector(id=pk)
         serializer = TahunAjaranUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        updated_ta = tahun_ajaran_update_service(
-            instance=ta, **serializer.validated_data
-        )
+        updated_ta = tahun_ajaran_update_service(instance=ta, **serializer.validated_data)
         return Response(
             {
                 "success": True,
@@ -152,6 +148,7 @@ class TahunAjaranDetailApi(APIView):
 @extend_schema(tags=["Semester"])
 class SemesterListCreateApi(APIView):
     permission_classes = [IsAdminRole]
+    permission_classes = [IsGuruRole]
 
     class Pagination(LimitOffsetPagination):
         default_limit = 10
@@ -202,6 +199,7 @@ class SemesterListCreateApi(APIView):
 @extend_schema(tags=["Semester"])
 class SemesterDetailApi(APIView):
     permission_classes = [IsAdminRole]
+    permission_classes = [IsGuruRole]
 
     @extend_schema(
         summary="Detail Semester",
@@ -223,9 +221,7 @@ class SemesterDetailApi(APIView):
         sem = semester_get_selector(id=pk)
         serializer = SemesterUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        updated_sem = semester_update_service(
-            instance=sem, **serializer.validated_data
-        )
+        updated_sem = semester_update_service(instance=sem, **serializer.validated_data)
         return Response(
             {
                 "success": True,
@@ -252,6 +248,7 @@ class SemesterDetailApi(APIView):
 @extend_schema(tags=["Kelas"])
 class KelasListCreateApi(APIView):
     permission_classes = [IsAdminRole]
+    permission_classes = [IsGuruRole]
 
     class Pagination(LimitOffsetPagination):
         default_limit = 10
@@ -291,6 +288,7 @@ class KelasListCreateApi(APIView):
 @extend_schema(tags=["Kelas"])
 class KelasDetailApi(APIView):
     permission_classes = [IsAdminRole]
+    permission_classes = [IsGuruRole]
 
     @extend_schema(
         summary="Detail Kelas",
@@ -312,9 +310,7 @@ class KelasDetailApi(APIView):
         kelas = kelas_get_selector(id=pk)
         serializer = KelasUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        updated_kelas = kelas_update_service(
-            instance=kelas, **serializer.validated_data
-        )
+        updated_kelas = kelas_update_service(instance=kelas, **serializer.validated_data)
         return Response(
             {
                 "success": True,
@@ -341,6 +337,7 @@ class KelasDetailApi(APIView):
 @extend_schema(tags=["Mata Pelajaran"])
 class MataPelajaranListCreateApi(APIView):
     permission_classes = [IsAdminRole]
+    permission_classes = [IsGuruRole]
 
     class Pagination(LimitOffsetPagination):
         default_limit = 10
@@ -380,6 +377,7 @@ class MataPelajaranListCreateApi(APIView):
 @extend_schema(tags=["Mata Pelajaran"])
 class MataPelajaranDetailApi(APIView):
     permission_classes = [IsAdminRole]
+    permission_classes = [IsGuruRole]
 
     @extend_schema(
         summary="Detail Mata Pelajaran",
@@ -401,9 +399,7 @@ class MataPelajaranDetailApi(APIView):
         mapel = mapel_get_selector(id=pk)
         serializer = MataPelajaranUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        updated_mapel = mapel_update_service(
-            instance=mapel, **serializer.validated_data
-        )
+        updated_mapel = mapel_update_service(instance=mapel, **serializer.validated_data)
         return Response(
             {
                 "success": True,
@@ -426,126 +422,63 @@ class MataPelajaranDetailApi(APIView):
         )
 
 
+
 # ==================== SISWA ====================
 @extend_schema(tags=["Siswa"])
 class SiswaListCreateApi(APIView):
-    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAdminRole]
+    permission_classes = [IsGuruRole]
 
     class Pagination(LimitOffsetPagination):
         default_limit = 10
 
     @extend_schema(
         summary="Daftar Siswa",
-        description="Mengambil daftar siswa terpaginasi dengan pencarian nama/NISN, filter kelas, dan filter level risiko EWS.",
+        description="Mengambil daftar siswa terpaginasi dengan opsi pencarian nama/NISN dan filter kelas.",
         parameters=[
             OpenApiParameter(
                 name="search",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description="Pencarian kata kunci untuk nama atau NISN siswa",
+                description="Cari berdasarkan Nama atau NISN",
                 required=False,
             ),
             OpenApiParameter(
                 name="kelas_id",
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
-                description="Filter berdasarkan ID Kelas (opsional: 'kelas')",
-                required=False,
-            ),
-            OpenApiParameter(
-                name="risk",
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                description="Filter tingkat risiko EWS (0/LOW, 1/MEDIUM, 2/HIGH)",
+                description="Filter berdasarkan ID Kelas (Kosong = Semua Siswa)",
                 required=False,
             ),
         ],
         responses={200: SiswaOutputSerializer(many=True)},
     )
     def get(self, request):
-        search_query = request.query_params.get("search", "").strip()
-        kelas_id = request.query_params.get(
-            "kelas_id"
-        ) or request.query_params.get("kelas")
-        risk_filter = request.query_params.get("risk")
+        # 1. Tangkap parameter pencarian (Aman dari None)
+        search = request.query_params.get("search", "").strip()
+        search = search if search else None
 
-        latest_week = (
-            PredictionResult.objects.aggregate(max_w=Max("minggu_ke"))["max_w"]
-            or 1
+        # 2. Tangkap parameter kelas_id
+        kelas_id_raw = request.query_params.get("kelas_id")
+        
+        # 3. Casting yang absolut aman
+        # Akan menjadi None jika frontend mengirim "?kelas_id=", "?kelas_id=null", atau tidak mengirim parameter sama sekali.
+        try:
+            kelas_id = int(kelas_id_raw)
+        except (TypeError, ValueError):
+            kelas_id = None
+
+        # 4. Return data
+        return get_paginated_response(
+            pagination_class=self.Pagination,
+            serializer_class=SiswaOutputSerializer,
+            queryset=siswa_list_selector(search=search, kelas_id=kelas_id),
+            request=request,
+            view=self,
         )
-
-        INPUT_TO_INT_MAP = {
-            "0": 0,
-            "LOW": 0,
-            "1": 1,
-            "MEDIUM": 1,
-            "2": 2,
-            "HIGH": 2,
-        }
-        INT_TO_LABEL_MAP = {0: "LOW", 1: "MEDIUM", 2: "HIGH"}
-
-        latest_preds = PredictionResult.objects.filter(minggu_ke=latest_week)
-
-        student_risk_map = {}
-        for pred in latest_preds:
-            siswa_pk = str(pred.siswa_id)
-            score = int(pred.risk_score)
-            if siswa_pk in student_risk_map:
-                student_risk_map[siswa_pk] = max(student_risk_map[siswa_pk], score)
-            else:
-                student_risk_map[siswa_pk] = score
-
-        student_label_map = {
-            pk: INT_TO_LABEL_MAP.get(score, "LOW")
-            for pk, score in student_risk_map.items()
-        }
-
-        siswa_qs = Siswa.objects.select_related("kelas", "parent_user").order_by(
-            "nama"
-        )
-
-        if search_query:
-            siswa_qs = siswa_qs.filter(
-                Q(nama__icontains=search_query) | Q(nisn__icontains=search_query)
-            )
-
-        if kelas_id and str(kelas_id).strip() not in ["", "null", "undefined"]:
-            siswa_qs = siswa_qs.filter(kelas_id=kelas_id)
-
-        if risk_filter and str(risk_filter).strip() not in [
-            "",
-            "null",
-            "undefined",
-        ]:
-            raw_input = str(risk_filter).upper().strip()
-            target_int = INPUT_TO_INT_MAP.get(raw_input)
-
-            if target_int is not None:
-                matched_pks = [
-                    pk for pk, score in student_risk_map.items() if score == target_int
-                ]
-
-                if target_int == 0:  # LOW
-                    siswa_qs = siswa_qs.filter(
-                        Q(pk__in=matched_pks) & ~Q(pk__in=list(student_risk_map.keys()))
-                    )
-                else:
-                    siswa_qs = siswa_qs.filter(pk__in=matched_pks)
-
-        paginator = self.Pagination()
-        page = paginator.paginate_queryset(siswa_qs, request, view=self)
-
-        serializer = SiswaOutputSerializer(
-            page,
-            many=True,
-            context={"request": request, "student_risk_map": student_label_map},
-        )
-
-        return paginator.get_paginated_response(serializer.data)
-
     @extend_schema(
-        summary="Buat Siswa Baru",
+        summary="Buat Siswa Baru (Auto Generate Akun)",
+        description="Mendaftarkan siswa sekaligus otomatis membuatkan kredensial login (User Siswa & User Orang Tua) berbasis NISN.",
         request=SiswaInputSerializer,
         responses={201: SiswaOutputSerializer},
     )
@@ -556,10 +489,8 @@ class SiswaListCreateApi(APIView):
         return Response(
             {
                 "success": True,
-                "message": "Siswa berhasil dibuat.",
-                "data": SiswaOutputSerializer(
-                    siswa, context={"request": request}
-                ).data,
+                "message": "Siswa beserta akun autentikasinya berhasil dibuat.",
+                "data": SiswaOutputSerializer(siswa).data,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -567,7 +498,10 @@ class SiswaListCreateApi(APIView):
 
 @extend_schema(tags=["Siswa"])
 class SiswaDetailApi(APIView):
-    permission_classes = [IsAdminRole]
+    
+    permission_classes = [ IsAdminRole]
+    permission_classes = [IsGuruRole] 
+   
 
     @extend_schema(
         summary="Detail Siswa",
@@ -581,7 +515,7 @@ class SiswaDetailApi(APIView):
         )
 
     @extend_schema(
-        summary="Perbarui Data Siswa",
+        summary="Perbarui Siswa",
         request=SiswaUpdateSerializer,
         responses={200: SiswaOutputSerializer},
     )
@@ -589,9 +523,7 @@ class SiswaDetailApi(APIView):
         siswa = siswa_get_selector(nisn=nisn)
         serializer = SiswaUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        updated_siswa = siswa_update_service(
-            instance=siswa, **serializer.validated_data
-        )
+        updated_siswa = siswa_update_service(instance=siswa, **serializer.validated_data)
         return Response(
             {
                 "success": True,

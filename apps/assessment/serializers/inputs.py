@@ -101,11 +101,3 @@ class BulkAssessmentInputSerializer(serializers.Serializer):
 
         return items
 
-
-class PredictionResultInputSerializer(serializers.Serializer):
-    siswa_nisn = serializers.CharField(max_length=20)
-    mapel_id = serializers.IntegerField()
-    semester_id = serializers.IntegerField()
-    minggu_ke = serializers.IntegerField(min_value=1, max_value=16)
-    risk_score = serializers.ChoiceField(choices=PredictionResult.RiskChoices.choices)
-    recommendation = serializers.CharField()

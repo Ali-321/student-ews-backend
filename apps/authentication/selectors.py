@@ -1,4 +1,3 @@
-
 from authentication.models import User
 from django.db.models import QuerySet
 
@@ -14,5 +13,3 @@ def user_list_selector(*, role: str = None) -> QuerySet[User]:
 def user_get_me_selector(*, user: User) -> User:
     """Selector untuk mengambil instance user yang sedang terautentikasi."""
     return user
-
-

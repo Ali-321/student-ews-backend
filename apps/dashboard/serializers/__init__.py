@@ -15,6 +15,12 @@ from apps.dashboard.serializers.outputs import (
     SchoolAnalyticsResponseSerializer,
     TopIntervensiItemSerializer,
     TrendPerformaItemSerializer,
+    DashboardSiswaDataSerializer,
+    DashboardSiswaResponseSerializer,
+    DashboardOrtuResponseSerializer,
+
+
+
 )
 
 __all__ = [
@@ -34,4 +40,8 @@ __all__ = [
     "FaktorRisikoItemSerializer",
     "SchoolAnalyticsResponseDataSerializer",
     "SchoolAnalyticsResponseSerializer",
+    "DashboardSiswaDataSerializer",
+    "DashboardSiswaResponseSerializer",
+    "DashboardOrtuResponseSerializer",
+
 ]

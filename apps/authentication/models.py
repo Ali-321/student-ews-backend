@@ -30,11 +30,12 @@ class CustomUserManager(BaseUserManager):
 
 class User(AbstractUser):
     class Role(models.TextChoices):
-        SUPERUSER = "SUPERUSER", "Superuser"
-        ADMIN = "ADMIN", "Admin"
-        GURU = "GURU", "Guru"
         SISWA = "SISWA", "Siswa"
         ORANGTUA = "ORANGTUA", "Orang Tua"
+        ADMIN = "ADMIN", "Admin"
+        GURU = "GURU", "Guru"        
+        SUPERUSER = "SUPERUSER", "Superuser"
+        
 
     # Menghapus kolom username bawaan Django
     username = None
@@ -54,3 +55,4 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.email} ({self.role})"
+    

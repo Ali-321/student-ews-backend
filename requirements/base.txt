@@ -6,3 +6,4 @@ djangorestframework-simplejwt>=5.3.0
 faker
 django-filter
 drf-spectacular
+python-dotenv>=1.0.0

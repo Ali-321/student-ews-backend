@@ -1,7 +1,6 @@
 from assessment.serializers.inputs import (
     BulkPresensiInputSerializer,
     HistoriStudytimeInputSerializer,
-    PredictionResultInputSerializer,
     PresensiHarianSerializer,
     SiswaAssessmentItemSerializer, 
     SiswaPresensiGridSerializer,
@@ -16,7 +15,14 @@ from assessment.serializers.outputs import (
     PresensiSiswaOutputSerializer,
     StatusChoiceOutputSerializer,
     SiswaHybridRiskOutputSerializer,
-)
+    SiswaRiskDetailResponseSerializer,
+    SiswaRiskDetailDataSerializer,
+    AnalisisEWSSerializer,
+    MetrikKinerjaSerializer,
+    ProfilSiswaDetailSerializer
+    
+
+)   
 
 __all__ = [
     "HistoriStudytimeInputSerializer",
@@ -27,11 +33,15 @@ __all__ = [
     "EvaluasiItemSerializer",
     "BulkAssessmentInputSerializer",
     "BulkPresensiInputSerializer",
-    "PredictionResultInputSerializer",
+    "PredictionResultOutputSerializer",
     "HistoriStudytimeOutputSerializer",
     "NilaiSiswaOutputSerializer",
     "PresensiSiswaOutputSerializer",
+    "SiswaRiskDetailDataSerializer",
+    "AnalisisEWSSerializer",
+    "MetrikKinerjaSerializer",
+    "ProfilSiswaDetailSerializer",
     "StatusChoiceOutputSerializer",
-    "PredictionResultOutputSerializer",
     "SiswaHybridRiskOutputSerializer",
+    "SiswaRiskDetailResponseSerializer",
 ]

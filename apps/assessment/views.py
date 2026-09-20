@@ -1,30 +1,34 @@
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404
 from rest_framework import status, serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes, inline_serializer
 
-from assessment.serializers.inputs import BulkAssessmentInputSerializer
-
-
 from apps.core.utils.pagination import SiswaPagination, get_paginated_response
+from apps.core.utils.permissions import IsAdminRole, IsGuruRole
 from assessment import selectors, services
+from assessment.models import PredictionResult
 from assessment.serializers import (
+    BulkAssessmentInputSerializer,
     BulkPresensiInputSerializer,
     HistoriStudytimeInputSerializer,
     HistoriStudytimeOutputSerializer,
     NilaiSiswaOutputSerializer,
-    PredictionResultInputSerializer,
     PredictionResultOutputSerializer,
     PresensiSiswaOutputSerializer,
     StatusChoiceOutputSerializer,
     SiswaHybridRiskOutputSerializer,
+    SiswaRiskDetailResponseSerializer
 )
 
 
+# ==========================================
+# 1. STUDY TIME DOMAIN
+# ==========================================
 class HistoriStudytimeListCreateAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminRole]
+    permission_classes = [IsGuruRole]
 
     @extend_schema(
         tags=["Assessment - Study Time"],
@@ -67,9 +71,87 @@ class HistoriStudytimeListCreateAPIView(APIView):
         )
 
 
-class PresensiBulkCreateAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+# ==========================================
+# 2. NILAI DOMAIN
+# ==========================================
+class NilaiSiswaListCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole]
+    permission_classes = [IsGuruRole] 
+    
 
+    @extend_schema(
+        tags=["Assessment - Nilai"],
+        summary="Mendapatkan daftar nilai siswa",
+        parameters=[
+            OpenApiParameter("siswa_nisn", OpenApiTypes.STR, description="NISN Siswa"),
+            OpenApiParameter("mapel_id", OpenApiTypes.INT, description="ID Mata Pelajaran"),
+            OpenApiParameter("semester_id", OpenApiTypes.INT, description="ID Semester"),
+            OpenApiParameter("jenis_evaluasi", OpenApiTypes.STR, description="Jenis Evaluasi (QUIZ, TUGAS, UTS, UAS)"),
+            OpenApiParameter("minggu_ke", OpenApiTypes.INT, description="Minggu ke-"),
+        ],
+        responses={200: NilaiSiswaOutputSerializer(many=True)},
+    )
+    def get(self, request):
+        filters = {
+            "siswa_nisn": request.query_params.get("siswa_nisn"),
+            "mapel_id": request.query_params.get("mapel_id"),
+            "semester_id": request.query_params.get("semester_id"),
+            "jenis_evaluasi": request.query_params.get("jenis_evaluasi"),
+            "minggu_ke": request.query_params.get("minggu_ke"),
+        }
+        filters = {k: v for k, v in filters.items() if v is not None}
+        nilai_qs = selectors.nilai_siswa_list(filters=filters)
+        serializer = NilaiSiswaOutputSerializer(nilai_qs, many=True)
+        return Response({"success": True, "data": serializer.data}, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        tags=["Assessment - Nilai"],
+        summary="Simpan data assessment & studytime secara bulk",
+        request=BulkAssessmentInputSerializer,
+        responses={201: inline_serializer(
+            name="BulkAssessmentResponse",
+            fields={
+                "success": serializers.BooleanField(),
+                "message": serializers.CharField(),
+                "data": inline_serializer(
+                    name="BulkAssessmentData",
+                    fields={
+                        "studytime_records": HistoriStudytimeOutputSerializer(many=True),
+                        "nilai_records": NilaiSiswaOutputSerializer(many=True),
+                    }
+                )
+            }
+        )},
+    )
+    def post(self, request):
+        serializer = BulkAssessmentInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        results = services.bulk_record_assessment(**serializer.validated_data)
+
+        studytime_serialized = HistoriStudytimeOutputSerializer(results["studytime_records"], many=True).data
+        nilai_serialized = NilaiSiswaOutputSerializer(results["nilai_records"], many=True).data
+
+        return Response(
+            {
+                "success": True,
+                "message": "Data assessment & studytime berhasil disimpan",
+                "data": {
+                    "studytime_records": studytime_serialized,
+                    "nilai_records": nilai_serialized,
+                },
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+# ==========================================
+# 3. PRESENSI DOMAIN
+# ==========================================
+class PresensiBulkCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminRole, IsGuruRole] 
+    permission_classes = [IsGuruRole]
+   
     @extend_schema(
         tags=["Assessment - Presensi"],
         summary="Mendapatkan daftar presensi siswa",
@@ -77,7 +159,7 @@ class PresensiBulkCreateAPIView(APIView):
             OpenApiParameter("siswa_nisn", OpenApiTypes.STR, description="NISN Siswa"),
             OpenApiParameter("mapel_id", OpenApiTypes.INT, description="ID Mata Pelajaran"),
             OpenApiParameter("semester_id", OpenApiTypes.INT, description="ID Semester"),
-            OpenApiParameter("status", OpenApiTypes.STR, description="Status Kehadiran (HADIR, ALPA, SAKIT, IZIN)"),
+            OpenApiParameter("status", OpenApiTypes.STR, description="Status Kehadiran (Hadir, Alpa, Sakit, Izin)"),
             OpenApiParameter("minggu_ke", OpenApiTypes.INT, description="Minggu ke-"),
         ],
         responses={200: PresensiSiswaOutputSerializer(many=True)},
@@ -117,243 +199,130 @@ class PresensiBulkCreateAPIView(APIView):
         )
 
 
-class NilaiSiswaListCreateAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(
-        tags=["Assessment - Nilai & Assessment"],
-        summary="Mendapatkan daftar nilai siswa",
-        parameters=[
-            OpenApiParameter("siswa_nisn", OpenApiTypes.STR, description="NISN Siswa"),
-            OpenApiParameter("mapel_id", OpenApiTypes.INT, description="ID Mata Pelajaran"),
-            OpenApiParameter("semester_id", OpenApiTypes.INT, description="ID Semester"),
-            OpenApiParameter("jenis_evaluasi", OpenApiTypes.STR, description="Jenis Evaluasi (QUIZ, TUGAS, UTS, UAS)"),
-            OpenApiParameter("minggu_ke", OpenApiTypes.INT, description="Minggu ke-"),
-        ],
-        responses={200: NilaiSiswaOutputSerializer(many=True)},
-    )
-    def get(self, request):
-        filters = {
-            "siswa_nisn": request.query_params.get("siswa_nisn"),
-            "mapel_id": request.query_params.get("mapel_id"),
-            "semester_id": request.query_params.get("semester_id"),
-            "jenis_evaluasi": request.query_params.get("jenis_evaluasi"),
-            "minggu_ke": request.query_params.get("minggu_ke"),
-        }
-        filters = {k: v for k, v in filters.items() if v is not None}
-        nilai_qs = selectors.nilai_siswa_list(filters=filters)
-        serializer = NilaiSiswaOutputSerializer(nilai_qs, many=True)
-        return Response({"success": True, "data": serializer.data}, status=status.HTTP_200_OK)
-
-    @extend_schema(
-        tags=["Assessment - Nilai & Assessment"],
-        summary="Simpan data matriks assessment (study time & nilai) secara bulk",
-        request=BulkAssessmentInputSerializer,
-        responses={201: NilaiSiswaOutputSerializer(many=True)},
-    )
-    def post(self, request):
-        serializer = BulkAssessmentInputSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        result = services.bulk_record_assessment(**serializer.validated_data)
-        output_serializer = NilaiSiswaOutputSerializer(result["nilai_records"], many=True)
-        return Response(
-            {
-                "success": True,
-                "message": "Data assessment (study time & nilai) berhasil disimpan",
-                "data": output_serializer.data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
-
-
-class PredictionResultListCreateAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(
-        tags=["Assessment - Prediksi EWS - ini nanti akan di Hapus -"],
-        summary="Mendapatkan daftar hasil prediksi EWS",
-        parameters=[
-            OpenApiParameter("siswa_nisn", OpenApiTypes.STR, description="NISN Siswa"),
-            OpenApiParameter("mapel_id", OpenApiTypes.INT, description="ID Mata Pelajaran"),
-            OpenApiParameter("semester_id", OpenApiTypes.INT, description="ID Semester"),
-            OpenApiParameter("risk_score", OpenApiTypes.STR, description="Tingkat Risiko (LOW, MEDIUM, HIGH)"),
-            OpenApiParameter("minggu_ke", OpenApiTypes.INT, description="Minggu ke-"),
-        ],
-        responses={200: PredictionResultOutputSerializer(many=True)},
-    )
-    def get(self, request):
-        filters = {
-            "siswa_nisn": request.query_params.get("siswa_nisn"),
-            "mapel_id": request.query_params.get("mapel_id"),
-            "semester_id": request.query_params.get("semester_id"),
-            "risk_score": request.query_params.get("risk_score"),
-            "minggu_ke": request.query_params.get("minggu_ke"),
-        }
-        filters = {k: v for k, v in filters.items() if v is not None}
-        prediction_qs = selectors.prediction_result_list(filters=filters)
-        serializer = PredictionResultOutputSerializer(prediction_qs, many=True)
-        return Response({"success": True, "data": serializer.data}, status=status.HTTP_200_OK)
-
-    @extend_schema(
-        tags=["Assessment - Prediksi EWS - ini nanti akan di Hapus -"],
-        summary="Mencatat hasil prediksi EWS",
-        request=PredictionResultInputSerializer,
-        responses={201: PredictionResultOutputSerializer},
-    )
-    def post(self, request):
-        serializer = PredictionResultInputSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        prediction = services.record_prediction_result(**serializer.validated_data)
-        output_serializer = PredictionResultOutputSerializer(prediction)
-        return Response(
-            {"success": True, "message": "Hasil prediksi EWS berhasil disimpan", "data": output_serializer.data},
-            status=status.HTTP_201_CREATED,
-        )
-
-
-class RingkasanAkademikSiswaAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(
-        tags=["Assessment - Ringkasan Akademik"],
-        summary="Mendapatkan ringkasan akademik siswa",
-        parameters=[
-            OpenApiParameter(
-                name="semester_id",
-                type=OpenApiTypes.INT,
-                location=OpenApiParameter.QUERY,
-                required=True,
-                description="ID Semester (Wajib)",
-            )
-        ],
-        responses={
-            200: OpenApiTypes.OBJECT,
-            400: OpenApiTypes.OBJECT,
-        },
-    )
-    def get(self, request, siswa_nisn):
-        semester_id = request.query_params.get("semester_id")
-        if not semester_id:
-            return Response(
-                {"success": False, "error": "Query parameter 'semester_id' wajib diisi"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        ringkasan = selectors.get_ringkasan_akademik_siswa(
-            siswa_nisn=siswa_nisn, semester_id=int(semester_id)
-        )
-        return Response({"success": True, "data": ringkasan}, status=status.HTTP_200_OK)
-
-    
 class StatusChoicesAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
         tags=["Assessment - Presensi"],
-        summary="Mendapatkan daftar status presensi siswa",
-        description="Mengembalikan daftar enum pilihan status presensi siswa untuk dropdown UI.",
-        responses={
-            200: inline_serializer(
-                name="PresensiStatusChoicesResponse",
-                fields={
-                    "success": serializers.BooleanField(default=True),
-                    "data": StatusChoiceOutputSerializer(many=True),
-                },
-            )
-        },
+        summary="Mendapatkan daftar pilihan status presensi",
+        responses={200: StatusChoiceOutputSerializer(many=True)},
     )
     def get(self, request):
-        status_choices = selectors.get_presensi_status_choices()
-        serializer = StatusChoiceOutputSerializer(status_choices, many=True)
-        return Response(
-            {"success": True, "data": serializer.data},
-            status=status.HTTP_200_OK,
-        )
+        choices = selectors.get_presensi_status_choices()
+        serializer = StatusChoiceOutputSerializer(choices, many=True)
+        return Response({"success": True, "data": serializer.data}, status=status.HTTP_200_OK)
 
 
-# ==================== Halaman Daftar Siswa ====================
-
+# ==========================================
+# 4. RISK ANALYTICS / EWS DOMAIN
+# ==========================================
 class SiswaRiskSummaryListApi(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminRole] 
+    permission_classes = [IsGuruRole]
+   
 
     @extend_schema(
-        tags=["Assessment - EWS (Untuk Halaman Daftar Siswa) catatan: semester_id optional, jika tidak diberikan akan otomatis mengambil semester aktif"],
-        summary="Mendapatkan daftar rekap risiko siswa (Paginated)",
-        description="Mengambil data rekap siswa berpaginasi dengan filter pencarian nama/NISN, kelas, dan status risiko.",
+        tags=["Assessment - Risk Analytics"],
+        summary="Mendapatkan daftar ringkasan risiko hybrid siswa (Paginated)",
+        description="Mengembalikan list siswa lengkap dengan nilai rata-rata, presensi, dan status ML EWS terbaru secara super cepat.",
         parameters=[
-            OpenApiParameter(
-                name="page",
-                type=OpenApiTypes.INT,
-                location=OpenApiParameter.QUERY,
-                required=False,
-                description="Nomor halaman (Default: 1)",
-            ),
-            OpenApiParameter(
-                name="page_size",
-                type=OpenApiTypes.INT,
-                location=OpenApiParameter.QUERY,
-                required=False,
-                description="Jumlah baris per halaman (Default: 10, Max: 100)",
-            ),
-            OpenApiParameter(
-                name="semester_id",
-                type=OpenApiTypes.INT,
-                location=OpenApiParameter.QUERY,
-                required=False,
-                description="Filter ID Semester",
-            ),
-            OpenApiParameter(
-                name="kelas_id",
-                type=OpenApiTypes.INT,
-                location=OpenApiParameter.QUERY,
-                required=False,
-                description="Filter ID Kelas",
-            ),
-            OpenApiParameter(
-                name="search",
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                required=False,
-                description="Pencarian Nama Siswa atau NISN",
-            ),
-            OpenApiParameter(
-                name="risk_status",
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                required=False,
-                enum=["HIGH", "MEDIUM", "LOW", "Tinggi", "Sedang", "Rendah"],
-                description="Filter status risiko",
-            ),
+            OpenApiParameter("kelas_id", OpenApiTypes.INT, description="ID Kelas"),
+            OpenApiParameter("search", OpenApiTypes.STR, description="Cari nama atau NISN siswa"),
+            OpenApiParameter("risk_status", OpenApiTypes.STR, description="Filter risiko: HIGH, MEDIUM, LOW"),
+            OpenApiParameter("page", OpenApiTypes.INT, description="Nomor halaman"),
+            OpenApiParameter("page_size", OpenApiTypes.INT, description="Jumlah item per halaman"),
         ],
         responses={200: SiswaHybridRiskOutputSerializer(many=True)},
     )
     def get(self, request):
-        semester_id = request.query_params.get("semester_id")
-        kelas_id = request.query_params.get("kelas_id")
-        search = request.query_params.get("search")
-        risk_status = request.query_params.get("risk_status")
+        search = request.query_params.get("search", "").strip() or None
+        risk_status = request.query_params.get("risk_status", "").strip() or None
+        
+        try:
+            kelas_id = int(request.query_params.get("kelas_id"))
+        except (TypeError, ValueError):
+            kelas_id = None
 
-        if risk_status:
-            status_map = {
-                "tinggi": "HIGH",
-                "sedang": "MEDIUM",
-                "rendah": "LOW",
-            }
-            risk_status = status_map.get(risk_status.lower(), risk_status)
-
-        siswa_queryset = selectors.get_siswa_with_hybrid_risk_selector(
-            semester_id=int(semester_id) if semester_id and semester_id.isdigit() else None,
-            kelas_id=int(kelas_id) if kelas_id and kelas_id.isdigit() else None,
+        qs = selectors.get_siswa_risk_summary_qs(
+            kelas_id=kelas_id,
             search=search,
             risk_status=risk_status,
         )
 
-        return get_paginated_response(
-            pagination_class=SiswaPagination,
-            serializer_class=SiswaHybridRiskOutputSerializer,
-            queryset=siswa_queryset,
-            request=request,
-            view=self,
+        paginator = SiswaPagination()
+        page = paginator.paginate_queryset(qs, request, view=self)
+
+        if page is not None:
+            # INJEKSI DATA MEMORI HANYA UNTUK 10 HALAMAN INI
+            page = selectors.attach_metrics_to_paginated_siswa(page)
+            serializer = SiswaHybridRiskOutputSerializer(page, many=True)
+            
+            # Kita tidak pakai helper get_paginated_response karena OrderedDict-nya berbeda
+            # Gunakan bawaan DRF
+            return paginator.get_paginated_response(serializer.data)
+
+        # Fallback
+        qs_list = selectors.attach_metrics_to_paginated_siswa(list(qs))
+        serializer = SiswaHybridRiskOutputSerializer(qs_list, many=True)
+        return Response({
+            "success": True, 
+            "message": "Berhasil mengambil data ringkasan risiko siswa",
+            "results": serializer.data
+        }, status=status.HTTP_200_OK)
+
+
+class DetailPrediksiEWSApi(APIView):
+    permission_classes = [IsAuthenticated,IsAdminRole]
+    permission_classes = [IsGuruRole]
+
+    @extend_schema(
+        tags=["Assessment - Risk Analytics"],
+        summary="Mendapatkan detail rekomendasi GenAI per Siswa dan Mapel",
+        responses={200: PredictionResultOutputSerializer}
+    )
+    def get(self, request, siswa_nisn: str, mapel_id: int, minggu_ke: int):
+        prediksi = get_object_or_404(
+            PredictionResult, 
+            siswa__nisn=siswa_nisn, 
+            mapel_id=mapel_id, 
+            minggu_ke=minggu_ke
         )
+        serializer = PredictionResultOutputSerializer(prediksi)
+        return Response({"success": True, "data": serializer.data}, status=status.HTTP_200_OK)
+
+class DetailProfilSiswaEWSApi(APIView):
+    
+    permission_classes = [IsAuthenticated, IsAdminRole] 
+    permission_classes = [IsGuruRole]
+
+    @extend_schema(
+        tags=["Assessment - Risk Analytics"],
+        summary="Mendapatkan detail profil dan metrik risiko siswa",
+        description="Mengembalikan agregasi data akademik formatif (Murni 1 Minggu Terakhir) dan rekomendasi GenAI. Otomatis menampilkan Mapel pertama jika tidak ada filter.",
+        parameters=[
+            OpenApiParameter("mapel_id", OpenApiTypes.INT, location=OpenApiParameter.QUERY, description="ID Mata Pelajaran (Opsional, Default: Mapel Pertama)"),
+        ],
+        responses={200: SiswaRiskDetailResponseSerializer}
+    )
+    def get(self, request, siswa_nisn: str):
+        mapel_id = request.query_params.get("mapel_id")
+        mapel_id = int(mapel_id) if mapel_id and mapel_id.isdigit() else None
+
+        try:
+            # Mengambil data dari selector yang sudah mengembalikan mapel_aktif
+            data = selectors.get_siswa_risk_detail(nisn=siswa_nisn, mapel_id=mapel_id)
+            
+            # DRF akan merender ini melalui SiswaRiskDetailResponseSerializer
+            return Response(
+                {
+                    "success": True, 
+                    "data": data
+                }, 
+                status=status.HTTP_200_OK
+            )
+        except ValueError as e:
+            # Proteksi jika database mapel kosong
+            return Response(
+                {"success": False, "message": str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )

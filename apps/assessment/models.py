@@ -93,7 +93,7 @@ class PresensiSiswa(models.Model):
 
     def __str__(self):
         return f"{self.siswa.nama} - {self.mapel.nama_mapel} (W{self.minggu_ke}): {self.status}"
-
+    
 
 class PredictionResult(models.Model):
     class RiskChoices(models.IntegerChoices):
@@ -106,8 +106,13 @@ class PredictionResult(models.Model):
     semester = models.ForeignKey(Semester, on_delete=models.CASCADE, related_name="predictions")
     minggu_ke = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(16)])
     risk_score = models.IntegerField(choices=RiskChoices.choices)
-    recommendation = models.TextField()
+
+    recommendation = models.JSONField(
+        default=dict,
+        help_text="Format JSON berisi rekomendasi multi-role: {'guru': '...', 'orangtua': '...', 'siswa': '...'}"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         app_label = "assessment"
